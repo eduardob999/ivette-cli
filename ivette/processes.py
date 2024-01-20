@@ -1,8 +1,111 @@
+import os
+import threading
+import subprocess
+
+
+from ivette.classes import CommandRunner
 from ivette.decorators import main_process
+from ivette.functions import set_up
 from ivette.networking import download_file, get_next_job
+from ivette.utils import waiting_message
+
+# Global variables
+job_done = False
+job_failed = False
+operation = None
+exit_status = None
+exit_code = None
+command_runner = CommandRunner()
+
+
+def run_nwchem(job_id, nproc):
+    """
+    Run the calculation
+    """
+
+    global job_done
+    global job_failed
+    global exit_status
+    global exit_code
+    global command_runner
+
+    if nproc:
+        command = [
+            f"mpirun -np {nproc} --use-hwthread-cpus --allow-run-as-root /usr/bin/nwchem tmp/{job_id}"]
+    else:
+        command = [
+            f"mpirun -map-by core --use-hwthread-cpus --allow-run-as-root /usr/bin/nwchem tmp/{job_id}"]
+
+    try:
+        # Use the instance to run the command
+        command_runner.run_command(command, job_id=job_id)
+        command_runner.wait_until_done()
+        print("logpoint")
+
+        if not exit_status:
+
+            if operation and operation.upper() == "OPTIMIZE":
+                # handle_optimize_operation(job_id, nproc)
+                pass
+            else:
+                # handle_other_operations(job_id, nproc)
+                pass
+
+        job_done = True
+
+    except subprocess.CalledProcessError as e:
+
+        if not e.returncode == -2:
+            # update_job(job_id, "failed", nproc=0)
+            # uploadFile(f"{job_id}.out", job_id,
+            #            bucketName='Outputs', localDir="tmp/")
+            pass
+        job_done = True
+        job_failed = True
+        exit_code = e.returncode
+        raise SystemExit from e
 
 
 @main_process('\nRun module has been stooped.')
-def run_job(nproc=None):
-    job = get_next_job()
-    download_file(job['url'], job['job_id'])
+def run_job(*, nproc=None, dev=False):
+
+    global job_done
+    global operation
+    global job_failed
+    global exit_status
+    global command_runner
+
+    # Local variables
+    job_id = None
+    package = None
+    operation = None
+
+    # Set number of processors
+    if not nproc:
+        nproc = os.cpu_count()
+    print("Running server: - ") 
+    print("Press Ctrl + C at any time to exit.")
+
+    # Loop over to run the queue
+    while True:
+
+        job = set_up(dev)
+        job_id = job['id']
+        package = job['package']
+        operation = job['operation']
+        
+        download_file(job['url'], job['job_id'])
+        raise SystemExit
+
+        # Check package
+        if not package == "NWChem":
+            print("Package not supported.")
+            raise SystemExit
+
+        run_thread = threading.Thread(target=run_nwchem, args=(job_id, nproc)).start()
+        run_thread.start()
+
+        while not job_done:
+            waiting_message(package)
+        
+        run_thread.join()  # Wait for the command thread to finish
