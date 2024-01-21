@@ -6,7 +6,7 @@ import subprocess
 from ivette.classes import CommandRunner
 from ivette.decorators import main_process
 from ivette.functions import set_up
-from ivette.networking import download_file, get_next_job, retrieve_url, update_job
+from ivette.networking import download_file, retrieve_url, update_job
 from ivette.utils import clean_up, is_nwchem_installed, print_color, waiting_message
 
 # Global variables
@@ -53,9 +53,8 @@ def run_nwchem(job_id, nproc):
         job_done = True
 
     except subprocess.CalledProcessError as e:
-
         if not e.returncode == -2:
-            # update_job(job_id, "failed", nproc=0)
+            update_job(job_id, "failed", nproc=0)
             # uploadFile(f"{job_id}.out", job_id,
             #            bucketName='Outputs', localDir="tmp/")
             pass
@@ -107,10 +106,19 @@ def run_job(*, nproc=None, dev=False):
 
         run_thread = threading.Thread(target=run_nwchem, args=(job_id, nproc))
         try:
+            print(f">  Job Id: {job_id}")
+            update_job(job_id, "in progress", nproc if nproc else os.cpu_count())
             run_thread.start()
             while not job_done:
                 waiting_message(package)
-            run_thread.join()  # Wait for the command thread to finish
+            run_thread.join()
+            clean_up(job_id)
+            if not job_failed:
+                print_color("✓ Job completed successfully.", "32")
+            else:
+                print(f"\n\n Job failed with exit code {exit_code}.")
+            job_done = False
+            job_failed = False
         except KeyboardInterrupt as e:
             print(' Exit requested.          ', flush=True)
             print('Waiting for all running processes to finish...', flush=True)

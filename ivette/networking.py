@@ -3,6 +3,8 @@ Networking module for Ivette.
 """
 import http.client
 import json
+import mimetypes
+import os
 
 
 # Methods definitions
@@ -57,8 +59,15 @@ def retrieve_url(bucket, job_id, dev=False):
     Retrieves the URL for the given bucket and job ID.
     If dev is True, uses the development environment.
     """
-    host = "localhost:5328" if dev else "ivette-py.vercel.app"
     return get_request(f"/api/python/retrieve_url/{bucket}/{job_id}", dev=dev)
+
+
+def retrieve_signed_url(bucket, job_id, dev=False):
+    """
+    Retrieves the signed URL for the given bucket and job ID.
+    If dev is True, uses the development environment.
+    """
+    return get_request(f"/api/python/retrieve_signed_url/{bucket}/{job_id}", dev=dev)
 
 
 # Post methods
@@ -89,3 +98,28 @@ def download_file(url, filename, *, dir='tmp/'):
     else:
         raise ValueError('Failed to download file')  # More specific exception
     conn.close()
+
+
+def upload_file(file_path, dev=False):
+    filename = os.path.basename(file_path)
+    host = "localhost:5328" if dev else "ivette-py.vercel.app"
+    path = "/api/python/upload_file"
+    conn = http.client.HTTPSConnection(host) if not dev else http.client.HTTPConnection(host)
+    
+    boundary = 'wL36Yn8afVp8Ag7AmP8qZ0SA4n1v9T'
+    headers = {'Content-Type': 'multipart/form-data; boundary=%s' % boundary}
+    body = b'--' + boundary.encode() + b'\r\n' + \
+           b'Content-Disposition: form-data; name="upload_file"; filename="%s"\r\n' % filename.encode() + \
+           b'Content-Type: %s\r\n\r\n' % mimetypes.guess_type(filename)[
+        0].encode()
+
+    with open(file_path, 'rb') as f:
+        body += f.read() + b'\r\n--' + boundary.encode() + b'--\r\n'
+
+    conn.request("POST", path, body=body, headers=headers)
+    response = conn.getresponse()
+    if response.status == 200:
+        return response.read().decode()
+    else:
+        error_message = f'Failed to send file. Status code: {response.status}, Response: {response.read().decode()}'
+        raise ValueError(error_message)
