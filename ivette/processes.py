@@ -6,8 +6,8 @@ import subprocess
 from ivette.classes import CommandRunner
 from ivette.decorators import main_process
 from ivette.functions import set_up
-from ivette.networking import download_file, get_next_job
-from ivette.utils import waiting_message
+from ivette.networking import download_file, get_next_job, retrieve_url, update_job
+from ivette.utils import clean_up, is_nwchem_installed, print_color, waiting_message
 
 # Global variables
 job_done = False
@@ -40,7 +40,6 @@ def run_nwchem(job_id, nproc):
         # Use the instance to run the command
         command_runner.run_command(command, job_id=job_id)
         command_runner.wait_until_done()
-        print("logpoint")
 
         if not exit_status:
 
@@ -66,7 +65,7 @@ def run_nwchem(job_id, nproc):
         raise SystemExit from e
 
 
-@main_process('\nRun module has been stooped.')
+@main_process('\nProcessing module has been stopped.')
 def run_job(*, nproc=None, dev=False):
 
     global job_done
@@ -83,7 +82,7 @@ def run_job(*, nproc=None, dev=False):
     # Set number of processors
     if not nproc:
         nproc = os.cpu_count()
-    print("Running server: - ") 
+    print("Running server: - ")
     print("Press Ctrl + C at any time to exit.")
 
     # Loop over to run the queue
@@ -93,19 +92,31 @@ def run_job(*, nproc=None, dev=False):
         job_id = job['id']
         package = job['package']
         operation = job['operation']
-        
-        download_file(job['url'], job['job_id'])
-        raise SystemExit
+        url = retrieve_url('Inputs', job_id, dev)['url']
+        download_file(url, job_id)
 
         # Check package
         if not package == "NWChem":
             print("Package not supported.")
             raise SystemExit
 
-        run_thread = threading.Thread(target=run_nwchem, args=(job_id, nproc)).start()
-        run_thread.start()
+        # Check if NWChem is installed
+        if not is_nwchem_installed():
+            print("NWChem is not installed.")
+            raise SystemExit
 
-        while not job_done:
-            waiting_message(package)
-        
-        run_thread.join()  # Wait for the command thread to finish
+        run_thread = threading.Thread(target=run_nwchem, args=(job_id, nproc))
+        try:
+            run_thread.start()
+            while not job_done:
+                waiting_message(package)
+            run_thread.join()  # Wait for the command thread to finish
+        except KeyboardInterrupt as e:
+            print(' Exit requested.          ', flush=True)
+            print('Waiting for all running processes to finish...', flush=True)
+            command_runner.stop()
+            run_thread.join()
+            update_job(job_id, "interrupted", nproc=0, dev=dev)
+            clean_up(job_id)
+            print_color("Job interrupted.       ", "34")
+            raise SystemExit from e

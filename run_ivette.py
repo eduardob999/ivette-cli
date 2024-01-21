@@ -18,7 +18,7 @@ def main():
     # Creating a mutually exclusive group for 'load' and 'run' flags
     group = parser.add_mutually_exclusive_group()
     # Adding flags
-    group.add_argument('--dev', action='store_true', help='Development flag')
+    parser.add_argument('--dev', action='store_true', help='Development flag')
     group.add_argument("--load", help="Load a file", metavar="filename")
     group.add_argument("--project", help="Load a Project", metavar="directory")
     group.add_argument("--job", help="Download a job input", metavar="jobId")
@@ -37,6 +37,7 @@ def main():
     print_color("IVETTE CLI", "32;1")
     print_color("by Eduardo Bogado (2023) (C)", "34")  # 34 blue
     print_color("-" * 40, "34")
+
     if args.dev:
         print_color("Running in development mode", "32")
         dev = True
@@ -44,6 +45,10 @@ def main():
     # Checking the flags
     if args.version:
         print_color("IVETTE CLI version 0.3.7", "32")
+    if args.np:
+        print_color(
+            f"A total of {args.np} threads will be used to run jobs", "32")
+        run_job(nproc=args.np, dev=dev)
     else:
         print_color(
             f"A total of {os.cpu_count()} threads will be used to run jobs", "32")
@@ -51,7 +56,7 @@ def main():
         while True:
             response = input("Do you want to continue? [Y/n]: ")
             if response.lower() == "n":
-                break
+                raise KeyboardInterrupt
             if response.lower() == "y":
                 run_job(dev=dev)
                 break

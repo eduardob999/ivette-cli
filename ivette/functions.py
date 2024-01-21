@@ -9,7 +9,7 @@ def set_up(dev, server_id=None):
     job = None
     interval = 30  # seconds
     print(
-        f"\n>  Checking for jobs every {interval} seconds.", end="\r", flush=True)
+        f"\n>  Checking for jobs...", end="\r", flush=True)
 
     while True:
 

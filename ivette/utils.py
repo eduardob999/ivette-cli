@@ -67,3 +67,7 @@ def waiting_message(process: str):
     for braille_char in waiting_message:
         print(f"   Running {process} Job {braille_char}", end="\r", flush=True)
         time.sleep(0.1)
+
+
+def is_nwchem_installed():
+    return shutil.which("nwchem") is not None
