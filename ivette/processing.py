@@ -6,7 +6,7 @@ import subprocess
 from ivette.classes import CommandRunner
 from ivette.decorators import main_process
 from ivette.utils import set_up
-from ivette.networking import download_file, retrieve_url, update_job
+from ivette.networking import download_file, retrieve_url, update_job, upload_file
 from ivette.utils import clean_up, is_nwchem_installed, print_color, waiting_message
 
 # Global variables
