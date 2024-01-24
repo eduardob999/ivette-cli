@@ -18,7 +18,7 @@ exit_code = None
 command_runner = CommandRunner()
 
 
-def run_nwchem(job_id, nproc):
+def run_nwchem(job_id, nproc, dev):
     """
     Run the calculation
     """
@@ -44,20 +44,18 @@ def run_nwchem(job_id, nproc):
         if not exit_status:
 
             if operation and operation.upper() == "OPTIMIZE":
-                # handle_optimize_operation(job_id, nproc)
-                pass
+                update_job(job_id, "processing", nproc=0)
+                upload_file(f"tmp/{job_id}.out", "handle_optimize", dev=dev)
             else:
-                # handle_other_operations(job_id, nproc)
-                pass
+                update_job(job_id, "processing", nproc=0)
+                upload_file(f"tmp/{job_id}.out", "handle_other", dev=dev)
 
         job_done = True
 
     except subprocess.CalledProcessError as e:
         if not e.returncode == -2:
             update_job(job_id, "failed", nproc=0)
-            # uploadFile(f"{job_id}.out", job_id,
-            #            bucketName='Outputs', localDir="tmp/")
-            pass
+            upload_file(f"tmp/{job_id}.out", "handle_error",)
         job_done = True
         job_failed = True
         exit_code = e.returncode
@@ -104,7 +102,7 @@ def run_job(*, nproc=None, dev=False):
             print("NWChem is not installed.")
             raise SystemExit
 
-        run_thread = threading.Thread(target=run_nwchem, args=(job_id, nproc))
+        run_thread = threading.Thread(target=run_nwchem, args=(job_id, nproc, dev))
         try:
             print(f">  Job Id: {job_id}")
             update_job(job_id, "in progress", nproc if nproc else os.cpu_count())

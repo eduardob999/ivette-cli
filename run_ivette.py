@@ -2,7 +2,7 @@
 import argparse
 import os
 
-from ivette.processes import run_job
+from ivette.processing import run_job
 from ivette.decorators import main_process
 from ivette.utils import print_color
 
@@ -38,6 +38,7 @@ def main():
     print_color("by Eduardo Bogado (2023) (C)", "34")  # 34 blue
     print_color("-" * 40, "34")
 
+    # Showing development mode
     if args.dev:
         print_color("Running in development mode", "32")
         dev = True
@@ -45,7 +46,7 @@ def main():
     # Checking the flags
     if args.version:
         print_color("IVETTE CLI version 0.3.7", "32")
-    if args.np:
+    elif args.np:
         print_color(
             f"A total of {args.np} threads will be used to run jobs", "32")
         run_job(nproc=args.np, dev=dev)
