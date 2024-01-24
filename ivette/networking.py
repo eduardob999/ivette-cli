@@ -3,6 +3,7 @@ Networking module for Ivette.
 """
 import http.client
 import json
+import logging
 import mimetypes
 import os
 
@@ -100,21 +101,33 @@ def download_file(url, filename, *, dir='tmp/'):
     conn.close()
 
 
-def upload_file(file_path, dev=False):
+def upload_file(file_path, instruction=None, dev=False):
     filename = os.path.basename(file_path)
     host = "localhost:5328" if dev else "ivette-py.vercel.app"
     path = "/api/python/upload_file"
-    conn = http.client.HTTPSConnection(host) if not dev else http.client.HTTPConnection(host)
-    
+    conn = http.client.HTTPSConnection(
+        host) if not dev else http.client.HTTPConnection(host)
+
     boundary = 'wL36Yn8afVp8Ag7AmP8qZ0SA4n1v9T'
     headers = {'Content-Type': 'multipart/form-data; boundary=%s' % boundary}
+
+    mime_type = mimetypes.guess_type(filename)[0]
+    if mime_type is None:
+        mime_type = 'application/octet-stream'
+
     body = b'--' + boundary.encode() + b'\r\n' + \
            b'Content-Disposition: form-data; name="upload_file"; filename="%s"\r\n' % filename.encode() + \
-           b'Content-Type: %s\r\n\r\n' % mimetypes.guess_type(filename)[
-        0].encode()
+           b'Content-Type: %s\r\n\r\n' % mime_type.encode()
 
     with open(file_path, 'rb') as f:
-        body += f.read() + b'\r\n--' + boundary.encode() + b'--\r\n'
+        body += f.read() + b'\r\n'
+
+    if instruction is not None:
+        body += b'--' + boundary.encode() + b'\r\n' + \
+                b'Content-Disposition: form-data; name="instruction"\r\n\r\n' + \
+                instruction.encode() + b'\r\n'
+
+    body += b'--' + boundary.encode() + b'--\r\n'
 
     conn.request("POST", path, body=body, headers=headers)
     response = conn.getresponse()
