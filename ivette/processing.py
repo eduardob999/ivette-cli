@@ -1,8 +1,9 @@
+# Standard lib imports
 import os
 import threading
 import subprocess
 
-
+# Local imports
 from ivette.classes import CommandRunner
 from ivette.decorators import main_process
 from ivette.utils import set_up
@@ -62,7 +63,7 @@ def run_nwchem(job_id, nproc, dev):
         raise SystemExit from e
 
 
-@main_process('\nProcessing module has been stopped.')
+@main_process('\n\nProcessing module has been stopped.')
 def run_job(*, nproc=None, dev=False):
 
     global job_done

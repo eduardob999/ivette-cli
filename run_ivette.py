@@ -1,7 +1,10 @@
 "CLI main executable for ivette."
+# Standard library imports
 import argparse
 import os
+import json
 
+# Local imports
 from ivette.processing import run_job
 from ivette.decorators import main_process
 from ivette.utils import print_color
@@ -11,6 +14,8 @@ from ivette.utils import print_color
 def main():
     "Main program thread."
     dev = False
+    with open('config.json') as f:
+        config = json.load(f)
     parser = argparse.ArgumentParser(
         description="""Python client for Ivette Computational chemistry and
         Bioinformatics project"""
@@ -45,7 +50,7 @@ def main():
 
     # Checking the flags
     if args.version:
-        print_color("IVETTE CLI version 0.3.7", "32")
+        print_color(f"IVETTE-CLIENT version {config['version']}", "32")
     elif args.np:
         print_color(
             f"A total of {args.np} threads will be used to run jobs", "32")
