@@ -122,7 +122,8 @@ def run_job(*, nproc=None, dev=False):
             print(' Exit requested.          ', flush=True)
             print('Waiting for all running processes to finish...', flush=True)
             command_runner.stop()
-            run_thread.join()
+            if run_thread.is_alive():
+                run_thread.join()
             update_job(job_id, "interrupted", nproc=0, dev=dev)
             clean_up(job_id)
             print_color("Job interrupted.       ", "34")
