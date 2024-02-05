@@ -46,10 +46,10 @@ def run_nwchem(job_id, nproc, dev):
 
             if operation and operation.upper() == "OPTIMIZE":
                 update_job(job_id, "processing", nproc=0)
-                upload_file(f"tmp/{job_id}.out", "handle_optimize", dev=dev)
+                upload_file(f"tmp/{job_id}.out", dev=dev)
             else:
                 update_job(job_id, "processing", nproc=0)
-                upload_file(f"tmp/{job_id}.out", "handle_other", dev=dev)
+                upload_file(f"tmp/{job_id}.out", dev=dev)
 
         job_done = True
 
