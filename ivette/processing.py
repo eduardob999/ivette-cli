@@ -56,7 +56,7 @@ def run_nwchem(job_id, nproc, dev):
     except subprocess.CalledProcessError as e:
         if not e.returncode == -2:
             update_job(job_id, "failed", nproc=0)
-            upload_file(f"tmp/{job_id}.out", "handle_error",)
+            upload_file(f"tmp/{job_id}.out", dev=dev)
         job_done = True
         job_failed = True
         exit_code = e.returncode
