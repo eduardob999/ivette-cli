@@ -3,6 +3,7 @@
 import argparse
 import os
 import json
+import sys
 
 # Local imports
 from ivette.processing import run_job
@@ -14,8 +15,15 @@ from ivette.utils import print_color
 def main():
     "Main program thread."
     dev = False
-    with open('config.json') as f:
+
+    # Loading the configuration file
+    config_path = os.path.join(sys.prefix, 'ivette-client', 'config.json')
+    if not os.path.exists(config_path):
+        config_path = "config.json"
+    with open(config_path) as f:
         config = json.load(f)
+
+    # Creating the parser
     parser = argparse.ArgumentParser(
         description="""Python client for Ivette Computational chemistry and
         Bioinformatics project"""
@@ -34,21 +42,18 @@ def main():
     group.add_argument("--off", help="Turn off a server", metavar="serverId")
     group.add_argument("--version", help="Show version", action="store_true")
     group.add_argument("--skip", help="Skip a job", metavar="jobId")
-    # Parsing the arguments
     args = parser.parse_args()
+
     # Header
     print_color("-" * 40, "32")
-    # 32 is the ANSI code for green, 1 makes it bold
     print_color("IVETTE CLI", "32;1")
     print_color("by Eduardo Bogado (2023) (C)", "34")  # 34 blue
     print_color("-" * 40, "34")
-
-    # Showing development mode
     if args.dev:
         print_color("Running in development mode", "32")
         dev = True
 
-    # Checking the flags
+    # Running the main program
     if args.version:
         print_color(f"IVETTE-CLIENT version {config['version']}", "32")
     elif args.np:

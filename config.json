@@ -1,9 +1,8 @@
 {
   "name": "ivette-client",
-  "version": "0.1.4",
+  "version": "0.1.10",
   "description": "Python client for Ivette Computational chemistry and Bioinformatics project",
   "author": "Eduardo Bogado",
-  "include_package_data": true,
   "py_modules": [
     "run_ivette",
     "ivette",

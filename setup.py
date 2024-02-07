@@ -4,4 +4,7 @@ import json
 with open('config.json') as f:
     setup_args = json.load(f)
 
-setup(**setup_args)
+setup(
+    data_files=[('ivette-client', ['config.json'])],
+    **setup_args
+)
