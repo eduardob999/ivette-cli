@@ -13,6 +13,22 @@ def print_color(text, color_code):
 
 
 def trim_file(filename, desired_size_mb):
+    """
+    Trims a file to a desired size by removing lines from the middle.
+
+    This function calculates the current size of the file and if it's larger than the desired size,
+    it calculates the number of lines to keep. It then keeps an equal number of lines from the 
+    beginning and the end of the file, and removes the rest. A message is inserted in the middle 
+    of the file indicating that it was trimmed.
+
+    Parameters:
+    filename (str): The path to the file to be trimmed.
+    desired_size_mb (float): The desired size of the file in megabytes (MB).
+
+    Returns:
+    None
+
+    """
     # Calculate the number of lines in the file
     with open(filename, 'r') as file:
         lines = file.readlines()

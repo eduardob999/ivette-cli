@@ -28,11 +28,18 @@ class CommandRunner:
 
     def stop(self):
         if self.process is not None:
-            # Terminate child processes
+            # Terminate and wait for child processes
             for child_pid in self.get_child_pids():
-                os.kill(child_pid, signal.SIGTERM)
+                try:
+                    os.kill(child_pid, signal.SIGTERM)
+                    os.waitpid(child_pid, 0)  # wait for child process to terminate
+                except ChildProcessError:
+                    # Ignore the error if the child process has already terminated
+                    pass
             # Terminate the main process
             self.process.terminate()
+            # Wait for the main process to terminate
+            self.process.wait()
 
     def wait_until_done(self):
         if self.process is not None:

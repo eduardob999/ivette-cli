@@ -3,6 +3,7 @@
 import argparse
 import os
 import json
+import site
 import sys
 
 # Local imports
@@ -11,17 +12,32 @@ from ivette.decorators import main_process
 from ivette.utils import print_color
 
 
+def load_config():
+    # Define possible paths for the configuration file
+    paths = [
+        os.path.join(sys.prefix, 'ivette-client', 'config.json'),
+        "config.json",
+        os.path.join(site.USER_BASE, 'ivette-client', 'config.json')
+    ]
+
+    # Iterate over the possible paths
+    for config_path in paths:
+        if os.path.exists(config_path):
+            # If the file exists, open and load the JSON
+            with open(config_path) as f:
+                return json.load(f)
+
+    # If no file was found, return a default configuration
+    return {'version': "Unable to read version"}
+
+
 @main_process("Ivette CLI has been terminated gracefully.")
 def main():
     "Main program thread."
     dev = False
 
     # Loading the configuration file
-    config_path = os.path.join(sys.prefix, 'ivette-client', 'config.json')
-    if not os.path.exists(config_path):
-        config_path = "config.json"
-    with open(config_path) as f:
-        config = json.load(f)
+    config = load_config()
 
     # Creating the parser
     parser = argparse.ArgumentParser(
