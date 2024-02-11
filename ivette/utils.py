@@ -2,7 +2,7 @@ import os
 import shutil
 import time
 
-from ivette.networking import get_next_job
+from ivette.networking import get_next_job, update_job
 
 
 def print_color(text, color_code):
@@ -94,7 +94,7 @@ def is_nwchem_installed():
 def set_up(dev, server_id=None):
     "returns id and package"
     job = None
-    interval = 30  # seconds
+    interval = 300  # seconds
     print(
         f"\n>  Checking for jobs...", end="\r", flush=True)
 
@@ -105,29 +105,25 @@ def set_up(dev, server_id=None):
             job = get_next_job(dev)
 
         except KeyboardInterrupt:
+
             if job:
                 clean_up(job[0])
-                # update_job(JOB[0], "interrupted", nproc=0)
+                update_job(job[0], "interrupted", nproc=0, dev=dev)
                 raise SystemExit
             else:
                 print("No job to interrupt.            ")
                 continue
 
         if len(job) == 0:
+
             for remaining in range(interval, 0, -1):
-                print(
-                    f">  No jobs due. Checking again in {remaining} seconds.",
-                    end="\r",
-                )
+                minutes, seconds = divmod(remaining, 60)
+                timer = f">  No jobs due. Checking again in {minutes} minutes {seconds} seconds."
+                print(timer, end="\r")
                 time.sleep(1)
                 # Clear the countdown timer
-                print(
-                    " "
-                    * len(
-                        f">  No jobs due. Checking again in {remaining} seconds."
-                    ),
-                    end="\r",
-                )
+                print(" " * len(timer), end="\r")
+        
         else:
             break
 
