@@ -87,25 +87,20 @@ def run_job(*, nproc=None, dev=False):
 
     # Loop over to run the queue
     while True:
-
-        job = set_up(dev)
+        
+        # Check if NWChem is installed
+        if not is_nwchem_installed():
+            print("NWChem is not installed.")
+            raise SystemExit
+        
+        job = set_up(dev, nproc)
         job_id = job['id']
         package = job['package']
         operation = job['operation']
         url = retrieve_url('Inputs', job_id, dev)['url']
         download_file(url, job_id)
-
-        # Check package
-        if not package == "NWChem":
-            print("Package not supported.")
-            raise SystemExit
-
-        # Check if NWChem is installed
-        if not is_nwchem_installed():
-            print("NWChem is not installed.")
-            raise SystemExit
-
         run_thread = threading.Thread(target=run_nwchem, args=(job_id, nproc, dev))
+
         try:
 
             print(f">  Job Id: {job_id}")

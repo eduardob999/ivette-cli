@@ -47,11 +47,11 @@ def post_request(path, data, headers, dev=False):
 
 
 # Get methods
-def get_next_job(dev=False):
+def get_next_job(memory, nproc,  dev=False):
     """
     Function to get the next job
     """
-    return get_request("/api/python/get_next_job", dev=dev)
+    return get_request(f"/api/python/get_next_job/{memory}/{nproc}", dev=dev)
 
 
 def retrieve_url(bucket, job_id, dev=False):

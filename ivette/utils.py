@@ -3,6 +3,7 @@ import shutil
 import time
 
 from ivette.networking import get_next_job, update_job
+from typing import Optional
 
 
 def print_color(text, color_code):
@@ -91,46 +92,56 @@ def is_nwchem_installed():
     return shutil.which("nwchem") is not None
 
 
-def set_up(dev, server_id=None):
-    "returns id and package"
+def set_up(dev: str, nproc: int, server_id: Optional[str] = None) -> dict:
+
     job = None
     interval = 300  # seconds
-    print(
-        f"\n>  Checking for jobs...", end="\r", flush=True)
+    folder_name = "tmp"
+    memory = get_total_memory()
+    print("\n>  Checking for jobs...", end="\r", flush=True)
 
     while True:
 
         try:
 
-            job = get_next_job(dev)
+            job = get_next_job(memory=memory, nproc=nproc, dev=dev)
+            if len(job) == 0:
+                for remaining in range(interval, 0, -1):
+                    minutes, seconds = divmod(remaining, 60)
+                    timer = f">  No jobs due. Checking again in {minutes} minutes {seconds} seconds."
+                    print(timer, end="\r")
+                    time.sleep(1)
+                    # Clear the countdown timer
+                    print(" " * len(timer), end="\r")
+            else:
+                if not os.path.exists(folder_name):
+                    # If it doesn't exist, create the folder
+                    os.mkdir(folder_name)
+                return job
 
         except KeyboardInterrupt:
 
-            if job:
+            if len(job) > 0:
                 clean_up(job[0])
                 update_job(job[0], "interrupted", nproc=0, dev=dev)
                 raise SystemExit
             else:
-                print("No job to interrupt.            ")
-                continue
+                print("\n No job to interrupt. Exiting...")
+                raise SystemExit
 
-        if len(job) == 0:
 
-            for remaining in range(interval, 0, -1):
-                minutes, seconds = divmod(remaining, 60)
-                timer = f">  No jobs due. Checking again in {minutes} minutes {seconds} seconds."
-                print(timer, end="\r")
-                time.sleep(1)
-                # Clear the countdown timer
-                print(" " * len(timer), end="\r")
-        
-        else:
-            break
+def get_total_memory():
+    """
+    This function returns the total memory on the system in megabytes.
 
-    # Create a new folder
-    folder_name = "tmp"
-    if not os.path.exists(folder_name):
-        # If it doesn't exist, create the folder
-        os.mkdir(folder_name)
-
-    return job
+    Returns:
+    int: The total memory on the system in megabytes.
+    """
+    with open('/proc/meminfo', 'r') as mem:
+        total_memory = 0
+        for i in mem:
+            sline = i.split()
+            if str(sline[0]) == 'MemTotal:':
+                total_memory = int(sline[1])
+                break
+    return total_memory / 1024  # convert from KiB to MB
