@@ -66,7 +66,7 @@ def run_nwchem(job_id, nproc, dev):
 
 
 @main_process('\nProcessing module has been stopped.')
-def run_job(*, nproc=None, dev=False):
+def run_job(*, maxproc=None, dev=False):
 
     global job_done
     global operation
@@ -78,10 +78,11 @@ def run_job(*, nproc=None, dev=False):
     job_id = None
     package = None
     operation = None
+    maxproc = int(maxproc) if maxproc else None
 
     # Set number of processors
-    if not nproc:
-        nproc = os.cpu_count()
+    if not maxproc:
+        maxproc = os.cpu_count()
     print("Running server: - ")
     print("Press Ctrl + C at any time to exit.")
 
@@ -93,13 +94,19 @@ def run_job(*, nproc=None, dev=False):
             print("NWChem is not installed.")
             raise SystemExit
         
-        job = set_up(dev, nproc)
+        job = set_up(dev, maxproc)
         job_id = job['id']
         package = job['package']
         operation = job['operation']
+        if job['nproc'] < maxproc:
+            print(f"Using only {job['nproc']} threads due to low memory.")
+            nproc = job['nproc']
+        else:
+            nproc = maxproc
         url = retrieve_url('Inputs', job_id, dev)['url']
         download_file(url, job_id)
-        run_thread = threading.Thread(target=run_nwchem, args=(job_id, nproc, dev))
+        run_thread = threading.Thread(
+            target=run_nwchem, args=(job_id, nproc, dev))
 
         try:
 

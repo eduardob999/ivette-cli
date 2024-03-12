@@ -75,7 +75,7 @@ def main():
     elif args.np:
         print_color(
             f"A total of {args.np} threads will be used to run jobs", "32")
-        run_job(nproc=args.np, dev=dev)
+        run_job(maxproc=args.np, dev=dev)
     else:
         print_color(
             f"A total of {os.cpu_count()} threads will be used to run jobs", "32")
