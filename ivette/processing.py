@@ -6,7 +6,7 @@ import subprocess
 # Local imports
 from ivette.classes import CommandRunner
 from ivette.decorators import main_process
-from ivette.utils import set_up, trim_file
+from ivette.utils import get_total_memory, set_up, trim_file
 from ivette.networking import download_file, retrieve_url, update_job, upload_file
 from ivette.utils import clean_up, is_nwchem_installed, print_color, waiting_message
 
@@ -104,7 +104,7 @@ def run_job(*, nproc=None, dev=False):
         try:
 
             print(f">  Job Id: {job_id}")
-            update_job(job_id, "in progress", nproc if nproc else os.cpu_count())
+            update_job(job_id, "in progress", nproc if nproc else os.cpu_count(), dev=dev, currentMemory=get_total_memory())
             run_thread.start()
             while not job_done:
                 waiting_message(package)

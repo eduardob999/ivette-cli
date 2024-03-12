@@ -71,7 +71,7 @@ def retrieve_signed_url(bucket, job_id, dev=False):
 
 
 # Post methods
-def update_job(job_id, status, nproc, species_id=None, dev=False):
+def update_job(job_id, status, nproc, species_id=None, dev=False, **kwargs):
     headers = {'Content-Type': 'application/json'}
     data = {
         'job_id': job_id,
@@ -79,6 +79,7 @@ def update_job(job_id, status, nproc, species_id=None, dev=False):
         'nproc': nproc,
         'species_id': species_id,
     }
+    data.update(kwargs)
     return post_request("/api/python/update_job", data, headers, dev)
 
 
