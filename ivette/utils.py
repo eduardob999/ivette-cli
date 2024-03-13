@@ -1,8 +1,9 @@
+import fnmatch
 import os
 import shutil
 import time
 
-from ivette.networking import get_next_job, update_job
+from ivette.networking import get_next_job, update_job, upload_file
 from typing import Optional
 
 
@@ -145,3 +146,31 @@ def get_total_memory():
                 total_memory = int(sline[1])
                 break
     return total_memory / 1024  # convert from KiB to MB
+
+
+def upload_by_prefix(
+        directory: str,
+        prefix: str,
+        dev: str,
+        instruction: Optional[str] = None,
+        include_no_ext: bool = False
+        ) -> None:
+    """
+    Uploads files from a given directory that start with a specified prefix.
+
+    Parameters:
+    directory (str): The directory to search for files.
+    prefix (str): The prefix of the files to be uploaded.
+    dev (str): The device to which the files will be uploaded.
+    instruction (str, optional): An instruction for the upload. Defaults to None.
+    include_no_ext (bool, optional): Whether to include files without extensions. Defaults to False.
+
+    Returns:
+    None
+    """
+    for filename in os.listdir(directory):
+        if fnmatch.fnmatch(filename, f"{prefix}*"):
+            # Check if the file has an extension or if include_no_ext is True
+            if os.path.splitext(filename)[1] or include_no_ext:
+                upload_file(os.path.join(directory, filename),
+                            instruction=instruction, dev=dev)

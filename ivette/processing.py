@@ -45,13 +45,12 @@ def run_nwchem(job_id, nproc, dev):
         if not exit_status:
 
             job_done = True
+            update_job(job_id, "processing", nproc=0)
 
             if operation and operation.upper() == "OPTIMIZE":
-                update_job(job_id, "processing", nproc=0)
                 trim_file(f"tmp/{job_id}.out", 1)
                 upload_file(f"tmp/{job_id}.out", dev=dev)
             else:
-                update_job(job_id, "processing", nproc=0)
                 trim_file(f"tmp/{job_id}.out", 1)
                 upload_file(f"tmp/{job_id}.out", dev=dev)
 
@@ -82,7 +81,7 @@ def run_job(*, maxproc=None, dev=False):
 
     # Set number of processors
     if not maxproc:
-        maxproc = os.cpu_count()
+        maxproc = int(os.cpu_count())
     print("Running server: - ")
     print("Press Ctrl + C at any time to exit.")
 
