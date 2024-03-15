@@ -1,10 +1,15 @@
 """
 Networking module for Ivette.
 """
+# Standard library imports
 import http.client
 import json
 import mimetypes
 import os
+from typing import Optional
+
+# Local application/library specific imports
+from ivette.utils import trim_file
 
 
 # Methods definitions
@@ -54,6 +59,13 @@ def get_next_job(memory, nproc,  dev=False):
     return get_request(f"/api/python/get_next_job/{memory}/{nproc}", dev=dev)
 
 
+def get_temp_filenames(bucket: str, prefix: str,  dev=False):
+    """
+    Retrieves an array with filenames from the given bucket and prefix.
+    """
+    return get_request(f"/api/python/get_temp_filenames/{bucket}/{prefix}", dev=dev)
+
+
 def retrieve_url(bucket, job_id, dev=False):
     """
     Retrieves the URL for the given bucket and job ID.
@@ -83,6 +95,19 @@ def update_job(job_id, status, nproc, species_id=None, dev=False, **kwargs):
     return post_request("/api/python/update_job", data, headers, dev)
 
 
+def delete_file(bucket, filename, dev=False, **kwargs):
+    """
+    Function to delete a file from the given bucket
+    """
+    headers = {'Content-Type': 'application/json'}
+    data = {
+        "bucket": bucket,
+        "filename": filename
+    }
+    data.update(kwargs)
+    return post_request("/api/python/delete_file", data, headers, dev)
+
+
 # File management
 def download_file(url, filename, *, dir='tmp/'):
     """
@@ -101,7 +126,22 @@ def download_file(url, filename, *, dir='tmp/'):
     conn.close()
 
 
-def upload_file(file_path, instruction=None, dev=False):
+def upload_file(file_path: str, instruction: Optional[str] = None, dev: bool = False) -> str:
+    """
+    Function to upload a file to the server.
+
+    Args:
+        file_path (str): The path to the file to be uploaded.
+        instruction (str, optional): Additional instruction for the server. Defaults to None.
+        dev (bool, optional): Whether to use the development environment. Defaults to False.
+        trim_size (int, optional): The size to trim the file to. Defaults to 25.
+
+    Returns:
+        str: The response from the server.
+
+    Raises:
+        ValueError: If the file upload fails.
+    """
     filename = os.path.basename(file_path)
     host = "localhost:5328" if dev else "ivette-py.vercel.app"
     path = "/api/python/upload_file"

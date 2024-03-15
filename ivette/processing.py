@@ -2,12 +2,14 @@
 import os
 import threading
 import subprocess
+import time
+from typing import Optional
 
 # Local imports
 from ivette.classes import CommandRunner
 from ivette.decorators import main_process
-from ivette.utils import get_total_memory, set_up, trim_file
-from ivette.networking import download_file, retrieve_url, update_job, upload_file
+from ivette.utils import get_system_info, get_total_memory, trim_file
+from ivette.networking import delete_file, download_file, get_next_job, get_temp_filenames, retrieve_url, update_job, upload_file
 from ivette.utils import clean_up, is_nwchem_installed, print_color, waiting_message
 
 # Global variables
@@ -41,22 +43,22 @@ def run_nwchem(job_id, nproc, dev):
         # Use the instance to run the command
         command_runner.run_command(command, job_id=job_id)
         command_runner.wait_until_done()
-
         if not exit_status:
-
             job_done = True
             update_job(job_id, "processing", nproc=0)
+            trim_file(f"tmp/{job_id}.out", 1)
+            upload_file(f"tmp/{job_id}.out", dev=dev)
+            temp_filenames = get_temp_filenames(
+                'Temps', job_id, dev)
+            if temp_filenames:
+                for filename in temp_filenames:
+                    delete_file('Temps', filename, dev)
 
-            if operation and operation.upper() == "OPTIMIZE":
-                trim_file(f"tmp/{job_id}.out", 1)
-                upload_file(f"tmp/{job_id}.out", dev=dev)
-            else:
-                trim_file(f"tmp/{job_id}.out", 1)
-                upload_file(f"tmp/{job_id}.out", dev=dev)
 
     except subprocess.CalledProcessError as e:
         if not e.returncode == -2:
             update_job(job_id, "failed", nproc=0)
+            trim_file(f"tmp/{job_id}.out", 1)
             upload_file(f"tmp/{job_id}.out", dev=dev)
         job_done = True
         job_failed = True
@@ -64,9 +66,96 @@ def run_nwchem(job_id, nproc, dev):
         raise SystemExit from e
 
 
+def set_up(dev: str, nproc: int, server_id: Optional[str] = None) -> dict:
+
+    job = None
+    interval = 300  # seconds
+    folder_name = "tmp"
+    memory = get_total_memory()
+    print("\n>  Checking for jobs...", end="\r", flush=True)
+
+    while True:
+
+        try:
+
+            job = get_next_job(memory=memory, nproc=nproc, dev=dev)
+
+            if len(job) == 0:
+                for remaining in range(interval, 0, -1):
+                    minutes, seconds = divmod(remaining, 60)
+                    timer = f">  No jobs due. Checking again in {minutes} minutes {seconds} seconds."
+                    print(timer, end="\r")
+                    time.sleep(1)
+                    # Clear the countdown timer
+                    print(" " * len(timer), end="\r")
+
+            else:
+
+                if not os.path.exists(folder_name):
+                    # If it doesn't exist, create the folder
+                    os.mkdir(folder_name)
+
+                job_url = retrieve_url('Inputs', job['id'], dev)['url']
+                download_file(job_url, job['id'])
+                temp_filenames = get_temp_filenames(
+                    'Temps', job['id'], dev)
+
+                if temp_filenames:
+                    print(">  Downloading saved progress", end="\r", flush=True)
+                    for filename in temp_filenames:
+                        temp_file_url = retrieve_url('Temps', filename, dev)['url']
+                        download_file(temp_file_url, filename)
+
+                return job
+
+        except KeyboardInterrupt:
+
+            if len(job) > 0:
+                clean_up(job[0])
+                update_job(job[0], "interrupted", nproc=0, dev=dev)
+                raise SystemExit
+            else:
+                print("\n No job to interrupt. Exiting...")
+                raise SystemExit
+
+
+def upload_from_dir(
+        directory: str,
+        dev: str,
+        *excluded_extensions: str,
+        exclude_files_without_extension: bool = True,
+        instruction: Optional[str] = None,
+) -> None:
+    """
+    Uploads all files from a given directory except those with specified extensions.
+
+    Parameters:
+    directory (str): The directory to search for files.
+    dev (str): The device to which the files will be uploaded.
+    exclude_files_without_extension (bool): If True, files without an extension will also be excluded.
+    *excluded_extensions (str): Extensions of the files to be excluded.
+    instruction (str, optional): An instruction for the upload. Defaults to None.
+
+    Returns:
+    None
+
+    Example:
+    >>> upload_all_except_extensions('/path/to/directory', 'device1', True, '.txt', '.docx')
+    This will upload all files in '/path/to/directory' to 'device1', excluding files with '.txt', '.docx' extensions and files without an extension.
+    """
+    for filename in os.listdir(directory):
+        # Check if the file's extension is not in the excluded_extensions
+        extension = os.path.splitext(filename)[1]
+        if (extension not in excluded_extensions and
+                not (exclude_files_without_extension and extension == '')):
+            upload_file(os.path.join(directory, filename),
+                        instruction=instruction, dev=dev)
+
+
 @main_process('\nProcessing module has been stopped.')
 def run_job(*, maxproc=None, dev=False):
 
+    # Global variables
     global job_done
     global operation
     global job_failed
@@ -78,21 +167,24 @@ def run_job(*, maxproc=None, dev=False):
     package = None
     operation = None
     maxproc = int(maxproc) if maxproc else None
+    memory = get_total_memory()
 
     # Set number of processors
     if not maxproc:
         maxproc = int(os.cpu_count())
-    print("Running server: - ")
+
+    server = get_system_info()
+    print(f"Running server: - {server.system_id}")
     print("Press Ctrl + C at any time to exit.")
 
     # Loop over to run the queue
     while True:
-        
+
         # Check if NWChem is installed
         if not is_nwchem_installed():
             print("NWChem is not installed.")
             raise SystemExit
-        
+
         job = set_up(dev, maxproc)
         job_id = job['id']
         package = job['package']
@@ -102,15 +194,14 @@ def run_job(*, maxproc=None, dev=False):
             nproc = job['nproc']
         else:
             nproc = maxproc
-        url = retrieve_url('Inputs', job_id, dev)['url']
-        download_file(url, job_id)
         run_thread = threading.Thread(
             target=run_nwchem, args=(job_id, nproc, dev))
 
         try:
 
             print(f">  Job Id: {job_id}")
-            update_job(job_id, "in progress", nproc if nproc else os.cpu_count(), dev=dev, currentMemory=get_total_memory())
+            update_job(job_id, "in progress", nproc if nproc else os.cpu_count(
+            ), dev=dev, currentMemory=memory)
             run_thread.start()
             while not job_done:
                 waiting_message(package)
@@ -126,12 +217,17 @@ def run_job(*, maxproc=None, dev=False):
         except KeyboardInterrupt as e:
 
             exit_status = True
-            print(' Exit requested.          ', flush=True)
+            print(' Exit requested.          \n', flush=True)
             print('Waiting for all running processes to finish...', flush=True)
             command_runner.stop()  # Probably should be waited too
             if run_thread.is_alive():
                 run_thread.join()
             if not job_done:
+                print('Saving current progress, please do NOT close this terminal...', flush=True)
+                trim_file(f"tmp/{job_id}.out", 1)
+                upload_file(f"tmp/{job_id}.out", dev=dev)
+                upload_from_dir(
+                    "tmp", dev, ".out", exclude_files_without_extension=True, instruction="Temps")
                 update_job(job_id, "interrupted", nproc=0, dev=dev)
             clean_up(job_id)
             print_color("Job interrupted.       ", "34")

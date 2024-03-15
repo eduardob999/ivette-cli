@@ -62,8 +62,9 @@ def main():
 
     # Header
     print_color("-" * 40, "32")
-    print_color("IVETTE CLI", "32;1")
+    print_color(f"IVETTE CLI {config['version']}", "32;1") # 32:1 green bold
     print_color("by Eduardo Bogado (2023) (C)", "34")  # 34 blue
+    print_color("All rights reserved.", "34")
     print_color("-" * 40, "34")
     if args.dev:
         print_color("Running in development mode", "32")
@@ -71,7 +72,10 @@ def main():
 
     # Running the main program
     if args.version:
-        print_color(f"IVETTE-CLIENT version {config['version']}", "32")
+        print(f"IVETTE-CLIENT version {config['version']}")
+        print(config['description'])
+        print_color("Developed by Eduardo Bogado (2023) (C)", "34")
+        print_color("All rights reserved.", "34")
     elif args.np:
         print_color(
             f"A total of {args.np} threads will be used to run jobs", "32")
