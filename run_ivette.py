@@ -75,7 +75,6 @@ def main():
         print(f"IVETTE-CLIENT version {config['version']}")
         print(config['description'])
         print_color("Developed by Eduardo Bogado (2023) (C)", "34")
-        print_color("All rights reserved.", "34")
     elif args.np:
         print_color(
             f"A total of {args.np} threads will be used to run jobs", "32")
