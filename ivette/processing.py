@@ -97,20 +97,20 @@ def set_up(dev: str, nproc: int, server_id: Optional[str] = None) -> dict:
 
                 job_url = retrieve_url('Inputs', job['id'], dev)['url']
                 download_file(job_url, job['id'])
-                temp_filenames = get_temp_filenames(
-                    'Temps', job['id'], dev)
+                temp_filenames = get_temp_filenames('Temps', job['id'], dev)
 
                 if temp_filenames:
                     print(">  Downloading saved progress", end="\r", flush=True)
                     for filename in temp_filenames:
-                        temp_file_url = retrieve_url('Temps', filename, dev)['url']
+                        temp_file_url = retrieve_url(
+                            'Temps', filename, dev)['url']
                         download_file(temp_file_url, filename)
 
                 return job
 
         except KeyboardInterrupt:
 
-            if len(job) > 0:
+            if job and len(job) > 0:
                 clean_up(job[0])
                 update_job(job[0], "interrupted", nproc=0, dev=dev)
                 raise SystemExit
