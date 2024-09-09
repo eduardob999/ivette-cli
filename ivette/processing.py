@@ -68,10 +68,13 @@ def run_nwchem(job_id, nproc, dev):
 
 def set_up(dev: str, nproc: int, server_id: Optional[str] = None) -> dict:
 
+    # Local variables
     job = None
     interval = 300  # seconds
     folder_name = "tmp"
     memory = get_total_memory()
+    interrupted = False
+
     print("\n>  Checking for jobs...", end="\r", flush=True)
 
     while True:
@@ -109,13 +112,13 @@ def set_up(dev: str, nproc: int, server_id: Optional[str] = None) -> dict:
                 return job
 
         except KeyboardInterrupt:
-
             if job and len(job) > 0:
-                clean_up(job[0])
-                update_job(job[0], "interrupted", nproc=0, dev=dev)
+                clean_up(job['id'])
+                update_job(job['id'], "interrupted", nproc=0, dev=dev)
                 raise SystemExit
             else:
-                print("\n No job to interrupt. Exiting...")
+                print("\n Exiting, please wait...")
+                #get job with setting up status and update
                 raise SystemExit
 
 
@@ -189,6 +192,8 @@ def run_job(*, maxproc=None, dev=False):
         job_id = job['id']
         package = job['package']
         operation = job['operation']
+        # Convert nproc to int
+        job['nproc'] = int(job['nproc'])
         if job['nproc'] < maxproc:
             print(f"Using only {job['nproc']} threads due to low memory.")
             nproc = job['nproc']
@@ -223,12 +228,18 @@ def run_job(*, maxproc=None, dev=False):
             if run_thread.is_alive():
                 run_thread.join()
             if not job_done:
-                print('Saving current progress, please do NOT close this terminal...', flush=True)
-                trim_file(f"tmp/{job_id}.out", 1)
-                upload_file(f"tmp/{job_id}.out", dev=dev)
-                upload_from_dir(
-                    "tmp", dev, ".out", exclude_files_without_extension=True, instruction="Temps")
+
+                # Save the current progress
+                output_file = f"tmp/{job_id}.out"
+                if os.path.exists(output_file):
+                    print('Saving current progress, please do NOT close this terminal...', flush=True)
+                    trim_file(output_file, 1)
+                    upload_file(output_file, dev=dev)
+                    upload_from_dir(
+                        "tmp", dev, ".out", exclude_files_without_extension=True, instruction="Temps")
                 update_job(job_id, "interrupted", nproc=0, dev=dev)
+            
+            # Clean up the files
             clean_up(job_id)
             print_color("Job interrupted.       ", "34")
             raise SystemExit from e
